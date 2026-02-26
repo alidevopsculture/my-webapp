@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Minus, Sparkles, Loader2 } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { PROJECTS, SKILLS, TECH_STACK } from '../constants';
 
 const ChatBot: React.FC = () => {
@@ -28,7 +28,7 @@ const ChatBot: React.FC = () => {
     setIsTyping(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenerativeAI(process.env.API_KEY || '');
       const systemPrompt = `
         You are "Ask Ali", the AI assistant for Ali Murtaza's professional DevOps portfolio.
         Ali's Profile:
