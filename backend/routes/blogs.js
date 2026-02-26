@@ -23,22 +23,22 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get all blogs including drafts (admin)
+router.get('/admin/all', auth, async (req, res) => {
+  try {
+    const blogs = await Blog.find().sort({ createdAt: -1 });
+    res.json(blogs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get single blog (public)
 router.get('/:id', async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
     if (!blog) return res.status(404).json({ error: 'Blog not found' });
     res.json(blog);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Get all blogs including drafts (admin)
-router.get('/admin/all', auth, async (req, res) => {
-  try {
-    const blogs = await Blog.find().sort({ createdAt: -1 });
-    res.json(blogs);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
