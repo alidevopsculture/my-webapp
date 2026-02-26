@@ -42,7 +42,7 @@ const Home: React.FC = () => {
           <div className="absolute inset-4 bg-slate-100 rounded-[3rem] rotate-3 -z-10"></div>
           <div className="aspect-square rounded-[2.5rem] overflow-hidden group border border-slate-100/50 relative z-0">
             <img 
-              src="/img/home/IMG_8714.jpg" 
+              src="/img/home/Hero.jpg" 
               alt="Cloud Infrastructure" 
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
             />
@@ -89,7 +89,7 @@ const Home: React.FC = () => {
           <div className="relative">
             <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden shadow-2xl">
               <img 
-                src="/img/home/IMG_3075.JPG" 
+                src="/img/home/IMG_8714.jpg" 
                 alt="Ali Murtaza" 
                 className="w-full h-full object-cover"
               />

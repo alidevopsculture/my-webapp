@@ -38,8 +38,8 @@ const CVDownloadModal: React.FC<CVDownloadModalProps> = ({ isOpen, onClose }) =>
         setStatus('success');
         // Download CV
         const link = document.createElement('a');
-        link.href = '/img/home/Ali_Murtaza_Resume-26.pdf';
-        link.download = 'Ali_Murtaza_Resume.pdf';
+        link.href = '/img/cvs/CV_Ali-Murtaza-2026.pdf';
+        link.download = 'CV_Ali-Murtaza-2026.pdf';
         link.click();
         
         setTimeout(() => {
