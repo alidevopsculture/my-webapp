@@ -14,6 +14,7 @@ const Navbar: React.FC<NavbarProps> = ({ onDownloadClick }) => {
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Profession', path: '/profession' },
+    { name: 'Blog', path: '/blog' },
     { name: 'Hobbies', path: '/hobbies' },
     { name: 'Contact', path: '/contact' },
   ];
@@ -26,7 +27,7 @@ const Navbar: React.FC<NavbarProps> = ({ onDownloadClick }) => {
     <Link to="/" className={`flex items-center space-x-3 tracking-tight group ${className}`}>
       <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-slate-100 group-hover:border-slate-900 transition-all duration-300">
         <img 
-          src="img/home/IMG_3597.jpg" 
+          src="/img/home/IMG_3597.jpg" 
           alt="Ali Murtaza" 
           className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
         />

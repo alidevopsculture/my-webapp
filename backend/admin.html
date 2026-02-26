@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - Portfolio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+  <div id="app"></div>
+
+  <script>
+    const API_URL = 'http://localhost:5000/api';
+    let token = localStorage.getItem('token');
+
+    function renderLogin() {
+      document.getElementById('app').innerHTML = '<div class="min-h-screen flex items-center justify-center"><div class="bg-white p-8 rounded-lg shadow-md w-96"><h1 class="text-2xl font-bold mb-6">Admin Login</h1><form id="loginForm"><input type="email" id="email" placeholder="Email" class="w-full p-2 border rounded mb-4" required><input type="password" id="password" placeholder="Password" class="w-full p-2 border rounded mb-4" required><button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Login</button></form><p id="error" class="text-red-500 mt-4 text-sm"></p></div></div>';
+
+      document.getElementById('loginForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        try {
+          const res = await fetch(API_URL + '/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, password: password })
+          });
+          const data = await res.json();
+          
+          if (res.ok) {
+            token = data.token;
+            localStorage.setItem('token', token);
+            renderDashboard();
+          } else {
+            document.getElementById('error').textContent = data.error;
+          }
+        } catch (err) {
+          document.getElementById('error').textContent = 'Login failed';
+        }
+      };
+    }
+
+    function renderDashboard() {
+      document.getElementById('app').innerHTML = '<div class="min-h-screen"><nav class="bg-white shadow-sm p-4 flex justify-between items-center"><h1 class="text-xl font-bold">Portfolio Admin</h1><button onclick="logout()" class="text-red-600 hover:text-red-800">Logout</button></nav><div class="max-w-7xl mx-auto p-6"><div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"><button onclick="showBlogs()" class="bg-blue-600 text-white p-6 rounded-lg hover:bg-blue-700"><h2 class="text-2xl font-bold">Blogs</h2></button><button onclick="showCV()" class="bg-green-600 text-white p-6 rounded-lg hover:bg-green-700"><h2 class="text-2xl font-bold">CV</h2></button><button onclick="showHobbies()" class="bg-purple-600 text-white p-6 rounded-lg hover:bg-purple-700"><h2 class="text-2xl font-bold">Hobbies</h2></button><button onclick="showQuotes()" class="bg-pink-600 text-white p-6 rounded-lg hover:bg-pink-700"><h2 class="text-2xl font-bold">Ali Says</h2></button></div><div id="content"></div></div></div>';
+    }
+
+    async function showBlogs() {
+      const res = await fetch(API_URL + '/blogs/admin/all', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const blogs = await res.json();
+
+      let blogsHTML = blogs.map(function(blog) {
+        return '<div class="border p-4 rounded flex justify-between items-center"><div><h3 class="font-bold">' + blog.title + '</h3><p class="text-sm text-gray-600">' + (blog.published ? '✅ Published' : '📝 Draft') + ' - ' + new Date(blog.createdAt).toLocaleDateString() + '</p></div><div class="space-x-2"><button onclick="editBlog(\'' + blog._id + '\')" class="text-blue-600 hover:text-blue-800">Edit</button><button onclick="deleteBlog(\'' + blog._id + '\')" class="text-red-600 hover:text-red-800">Delete</button></div></div>';
+      }).join('');
+
+      document.getElementById('content').innerHTML = '<div class="bg-white p-6 rounded-lg shadow"><div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">Blogs</h2><button onclick="showBlogForm()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">+ New Blog</button></div><div id="blogForm" class="hidden mb-6 p-4 border rounded"><h3 class="text-xl font-bold mb-4">Create Blog</h3><form id="createBlogForm" enctype="multipart/form-data"><input type="text" name="title" placeholder="Title" class="w-full p-2 border rounded mb-3" required><textarea name="excerpt" placeholder="Excerpt" class="w-full p-2 border rounded mb-3" rows="2"></textarea><textarea name="content" placeholder="Content (Markdown supported)" class="w-full p-2 border rounded mb-3 font-mono text-sm" rows="10" required></textarea><div class="mb-3 p-3 bg-gray-50 rounded text-xs"><p class="font-bold mb-2">Markdown: **bold** *italic* [link](url) # H1 ## H2 - list</p></div><input type="text" name="category" placeholder="Category" class="w-full p-2 border rounded mb-3"><input type="text" name="tags" placeholder="Tags (comma separated)" class="w-full p-2 border rounded mb-3"><input type="file" name="image" accept="image/*" class="w-full p-2 border rounded mb-3"><label class="flex items-center mb-3"><input type="checkbox" name="published" class="mr-2"> Published</label><button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Save Blog</button></form></div><div class="space-y-4">' + blogsHTML + '</div></div>';
+
+      document.getElementById('createBlogForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        formData.set('tags', JSON.stringify(formData.get('tags').split(',').map(function(t) { return t.trim(); })));
+        formData.set('published', formData.get('published') === 'on');
+
+        await fetch(API_URL + '/blogs', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token },
+          body: formData
+        });
+        showBlogs();
+      };
+    }
+
+    function showBlogForm() {
+      document.getElementById('blogForm').classList.toggle('hidden');
+    }
+
+    async function editBlog(id) {
+      const res = await fetch(API_URL + '/blogs/' + id, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const blog = await res.json();
+
+      document.getElementById('blogForm').classList.remove('hidden');
+      document.getElementById('blogForm').innerHTML = '<h3 class="text-xl font-bold mb-4">Edit Blog</h3><form id="editBlogForm" enctype="multipart/form-data"><input type="text" name="title" value="' + blog.title + '" placeholder="Title" class="w-full p-2 border rounded mb-3" required><textarea name="excerpt" placeholder="Excerpt" class="w-full p-2 border rounded mb-3" rows="2">' + (blog.excerpt || '') + '</textarea><textarea name="content" placeholder="Content" class="w-full p-2 border rounded mb-3 font-mono text-sm" rows="10" required>' + blog.content + '</textarea><div class="mb-3 p-3 bg-gray-50 rounded text-xs"><p class="font-bold mb-2">Markdown: **bold** *italic* [link](url) # H1 ## H2 - list</p></div><input type="text" name="category" value="' + (blog.category || '') + '" placeholder="Category" class="w-full p-2 border rounded mb-3"><input type="text" name="tags" value="' + (blog.tags ? blog.tags.join(', ') : '') + '" placeholder="Tags" class="w-full p-2 border rounded mb-3"><input type="file" name="image" accept="image/*" class="w-full p-2 border rounded mb-3"><p class="text-sm text-gray-600 mb-3">Current: ' + (blog.image || 'None') + '</p><label class="flex items-center mb-3"><input type="checkbox" name="published" ' + (blog.published ? 'checked' : '') + ' class="mr-2"> Published</label><div class="flex gap-2"><button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Update</button><button type="button" onclick="showBlogs()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Cancel</button></div></form>';
+
+      document.getElementById('editBlogForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        formData.set('tags', JSON.stringify(formData.get('tags').split(',').map(function(t) { return t.trim(); })));
+        formData.set('published', formData.get('published') === 'on');
+
+        await fetch(API_URL + '/blogs/' + id, {
+          method: 'PUT',
+          headers: { 'Authorization': 'Bearer ' + token },
+          body: formData
+        });
+        showBlogs();
+      };
+    }
+
+    async function deleteBlog(id) {
+      if (confirm('Delete this blog?')) {
+        await fetch(API_URL + '/blogs/' + id, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        showBlogs();
+      }
+    }
+
+    async function showCV() {
+      const res = await fetch(API_URL + '/cv/all', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const cvs = await res.json();
+
+      let cvsHTML = cvs.map(function(cv) {
+        return '<div class="border p-4 rounded flex justify-between items-center"><div><h3 class="font-bold">' + cv.filename + '</h3><p class="text-sm text-gray-600">' + (cv.active ? '✅ Active' : '⚪ Inactive') + ' - v' + cv.version + ' - ' + new Date(cv.uploadedAt).toLocaleDateString() + '</p></div><div class="space-x-2">' + (!cv.active ? '<button onclick="activateCV(\'' + cv._id + '\')" class="text-blue-600 hover:text-blue-800">Activate</button>' : '') + '<button onclick="deleteCV(\'' + cv._id + '\')" class="text-red-600 hover:text-red-800">Delete</button></div></div>';
+      }).join('');
+
+      document.getElementById('content').innerHTML = '<div class="bg-white p-6 rounded-lg shadow"><h2 class="text-2xl font-bold mb-6">CV Management</h2><form id="uploadCVForm" class="mb-6 p-4 border rounded"><h3 class="text-xl font-bold mb-4">Upload New CV</h3><input type="file" name="cv" accept=".pdf" class="w-full p-2 border rounded mb-3" required><input type="text" name="version" placeholder="Version (e.g., 2.0)" class="w-full p-2 border rounded mb-3"><button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Upload CV</button></form><div class="space-y-4">' + cvsHTML + '</div></div>';
+
+      document.getElementById('uploadCVForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+
+        await fetch(API_URL + '/cv/upload', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token },
+          body: formData
+        });
+        showCV();
+      };
+    }
+
+    async function activateCV(id) {
+      await fetch(API_URL + '/cv/' + id + '/activate', {
+        method: 'PATCH',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      showCV();
+    }
+
+    async function deleteCV(id) {
+      if (confirm('Delete this CV?')) {
+        await fetch(API_URL + '/cv/' + id, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        showCV();
+      }
+    }
+
+    async function showHobbies() {
+      const categoriesRes = await fetch(API_URL + '/categories');
+      const categories = await categoriesRes.json();
+      
+      const res = await fetch(API_URL + '/hobbies', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const hobbies = await res.json();
+
+      let categoriesHTML = categories.map(function(cat) {
+        return '<div class="border p-4 rounded flex justify-between items-center"><div><h3 class="font-bold">' + cat.name + '</h3></div><div class="space-x-2"><button onclick="editCategory(\'' + cat._id + '\')" class="text-blue-600 hover:text-blue-800">Edit</button><button onclick="deleteCategory(\'' + cat._id + '\')" class="text-red-600 hover:text-red-800">Delete</button></div></div>';
+      }).join('');
+
+      let hobbiesHTML = hobbies.map(function(hobby) {
+        return '<div class="border p-4 rounded flex justify-between items-center"><div><h3 class="font-bold">' + hobby.category + '</h3><p class="text-sm text-gray-600">' + hobby.headline + '</p></div><div class="space-x-2"><button onclick="editHobby(\'' + hobby._id + '\')" class="text-blue-600 hover:text-blue-800">Edit</button><button onclick="deleteHobby(\'' + hobby._id + '\')" class="text-red-600 hover:text-red-800">Delete</button></div></div>';
+      }).join('');
+
+      let categoryOptions = categories.map(function(cat) { return '<option value="' + cat.name + '">' + cat.name + '</option>'; }).join('');
+
+      document.getElementById('content').innerHTML = '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="bg-white p-6 rounded-lg shadow"><div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">Categories</h2><button onclick="showCategoryForm()" class="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700">+ New Category</button></div><div id="categoryForm" class="hidden mb-6 p-4 border rounded"><h3 class="text-xl font-bold mb-4">Create Category</h3><form id="createCategoryForm"><input type="text" name="name" placeholder="Category Name" class="w-full p-2 border rounded mb-3" required><input type="number" name="order" placeholder="Order" class="w-full p-2 border rounded mb-3"><button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Save</button></form></div><div class="space-y-4">' + categoriesHTML + '</div></div><div class="bg-white p-6 rounded-lg shadow"><div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">Hobbies</h2><button onclick="showHobbyForm()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">+ New Hobby</button></div><div id="hobbyForm" class="hidden mb-6 p-4 border rounded"><h3 class="text-xl font-bold mb-4">Create Hobby</h3><form id="createHobbyForm" enctype="multipart/form-data"><select name="category" class="w-full p-2 border rounded mb-3" required>' + categoryOptions + '</select><input type="text" name="headline" placeholder="Headline" class="w-full p-2 border rounded mb-3" required><input type="file" name="image" accept="image/*" class="w-full p-2 border rounded mb-3" required><input type="number" name="order" placeholder="Order" class="w-full p-2 border rounded mb-3"><button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Save</button></form></div><div class="space-y-4">' + hobbiesHTML + '</div></div></div>';
+
+      document.getElementById('createCategoryForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        await fetch(API_URL + '/categories', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: formData.get('name'), order: formData.get('order') || 0 })
+        });
+        showHobbies();
+      };
+
+      document.getElementById('createHobbyForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        await fetch(API_URL + '/hobbies', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token },
+          body: formData
+        });
+        showHobbies();
+      };
+    }
+
+    function showHobbyForm() {
+      document.getElementById('hobbyForm').classList.toggle('hidden');
+    }
+
+    async function editHobby(id) {
+      const res = await fetch(API_URL + '/hobbies', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const hobbies = await res.json();
+      const hobby = hobbies.find(function(h) { return h._id === id; });
+
+      document.getElementById('hobbyForm').classList.remove('hidden');
+      document.getElementById('hobbyForm').innerHTML = '<h3 class="text-xl font-bold mb-4">Edit Hobby</h3><form id="editHobbyForm" enctype="multipart/form-data"><input type="text" name="category" value="' + hobby.category + '" placeholder="Category" class="w-full p-2 border rounded mb-3" required><input type="text" name="headline" value="' + hobby.headline + '" placeholder="Headline" class="w-full p-2 border rounded mb-3" required><input type="file" name="image" accept="image/*" class="w-full p-2 border rounded mb-3"><p class="text-sm text-gray-600 mb-3">Current: ' + hobby.image + '</p><input type="number" name="order" value="' + hobby.order + '" placeholder="Order" class="w-full p-2 border rounded mb-3"><div class="flex gap-2"><button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Update</button><button type="button" onclick="showHobbies()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Cancel</button></div></form>';
+
+      document.getElementById('editHobbyForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+
+        await fetch(API_URL + '/hobbies/' + id, {
+          method: 'PUT',
+          headers: { 'Authorization': 'Bearer ' + token },
+          body: formData
+        });
+        showHobbies();
+      };
+    }
+
+    async function deleteHobby(id) {
+      if (confirm('Delete this hobby?')) {
+        await fetch(API_URL + '/hobbies/' + id, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        showHobbies();
+      }
+    }
+
+    async function editCategory(id) {
+      const res = await fetch(API_URL + '/categories');
+      const categories = await res.json();
+      const category = categories.find(function(c) { return c._id === id; });
+
+      document.getElementById('categoryForm').classList.remove('hidden');
+      document.getElementById('categoryForm').innerHTML = '<h3 class="text-xl font-bold mb-4">Edit Category</h3><form id="editCategoryForm"><input type="text" name="name" value="' + category.name + '" class="w-full p-2 border rounded mb-3" required><input type="number" name="order" value="' + category.order + '" class="w-full p-2 border rounded mb-3"><div class="flex gap-2"><button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Update</button><button type="button" onclick="showHobbies()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Cancel</button></div></form>';
+
+      document.getElementById('editCategoryForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        await fetch(API_URL + '/categories/' + id, {
+          method: 'PUT',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: formData.get('name'), order: formData.get('order') || 0 })
+        });
+        showHobbies();
+      };
+    }
+
+    async function deleteCategory(id) {
+      if (confirm('Delete this category?')) {
+        await fetch(API_URL + '/categories/' + id, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        showHobbies();
+      }
+    }
+
+    function showCategoryForm() {
+      document.getElementById('categoryForm').classList.toggle('hidden');
+    }
+
+    async function showQuotes() {
+      const res = await fetch(API_URL + '/quotes/all', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const quotes = await res.json();
+
+      let quotesHTML = quotes.map(function(quote) {
+        return '<div class="border p-4 rounded flex justify-between items-center"><div><p class="text-gray-700">' + quote.text + '</p><p class="text-xs text-gray-500 mt-2">' + (quote.active ? '✅ Active' : '⚪ Inactive') + (quote.profileImage ? ' | Image: Yes' : '') + ' | ❤️ ' + (quote.likes || 0) + ' | 🔗 ' + (quote.shares || 0) + '</p></div><div class="space-x-2"><button onclick="editQuote(\'' + quote._id + '\')" class="text-blue-600 hover:text-blue-800">Edit</button><button onclick="deleteQuote(\'' + quote._id + '\')" class="text-red-600 hover:text-red-800">Delete</button></div></div>';
+      }).join('');
+
+      document.getElementById('content').innerHTML = '<div class="bg-white p-6 rounded-lg shadow"><div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold">Ali Says Quotes</h2><button onclick="showQuoteForm()" class="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700">+ New Quote</button></div><div id="quoteForm" class="hidden mb-6 p-4 border rounded"><h3 class="text-xl font-bold mb-4">Create Quote</h3><form id="createQuoteForm" enctype="multipart/form-data"><textarea name="text" placeholder="Quote text..." class="w-full p-2 border rounded mb-3" rows="3" required></textarea><input type="file" name="profileImage" accept="image/*" class="w-full p-2 border rounded mb-3"><input type="number" name="order" placeholder="Order" class="w-full p-2 border rounded mb-3"><label class="flex items-center mb-3"><input type="checkbox" name="active" checked class="mr-2"> Active</label><button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Save</button></form></div><div class="space-y-4">' + quotesHTML + '</div></div>';
+
+      document.getElementById('createQuoteForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        formData.set('active', formData.get('active') === 'on');
+        await fetch(API_URL + '/quotes', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token },
+          body: formData
+        });
+        showQuotes();
+      };
+    }
+
+    function showQuoteForm() {
+      document.getElementById('quoteForm').classList.toggle('hidden');
+    }
+
+    async function editQuote(id) {
+      const res = await fetch(API_URL + '/quotes/all', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const quotes = await res.json();
+      const quote = quotes.find(function(q) { return q._id === id; });
+
+      document.getElementById('quoteForm').classList.remove('hidden');
+      document.getElementById('quoteForm').innerHTML = '<h3 class="text-xl font-bold mb-4">Edit Quote</h3><form id="editQuoteForm" enctype="multipart/form-data"><textarea name="text" class="w-full p-2 border rounded mb-3" rows="3" required>' + quote.text + '</textarea><input type="file" name="profileImage" accept="image/*" class="w-full p-2 border rounded mb-3"><p class="text-sm text-gray-600 mb-3">Current: ' + (quote.profileImage || 'None') + '</p><input type="number" name="order" value="' + quote.order + '" class="w-full p-2 border rounded mb-3"><label class="flex items-center mb-3"><input type="checkbox" name="active" ' + (quote.active ? 'checked' : '') + ' class="mr-2"> Active</label><div class="flex gap-2"><button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Update</button><button type="button" onclick="showQuotes()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Cancel</button></div></form>';
+
+      document.getElementById('editQuoteForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        formData.set('active', formData.get('active') === 'on');
+        await fetch(API_URL + '/quotes/' + id, {
+          method: 'PUT',
+          headers: { 'Authorization': 'Bearer ' + token },
+          body: formData
+        });
+        showQuotes();
+      };
+    }
+
+    async function deleteQuote(id) {
+      if (confirm('Delete this quote?')) {
+        await fetch(API_URL + '/quotes/' + id, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        showQuotes();
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      token = null;
+      renderLogin();
+    }
+
+    if (token) renderDashboard();
+    else renderLogin();
+  </script>
+</body>
+</html>

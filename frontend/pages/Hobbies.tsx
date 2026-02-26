@@ -1,15 +1,37 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Maximize2 } from 'lucide-react';
-import { HOBBIES } from '../constants';
+
+interface Hobby {
+  _id: string;
+  category: string;
+  headline: string;
+  image: string;
+  order: number;
+}
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const Hobbies: React.FC = () => {
-  const [filter, setFilter] = useState<'All' | 'Graphic Design' | 'Photography'>('All');
-  const [selectedImage, setSelectedImage] = useState<typeof HOBBIES[0] | null>(null);
+  const [filter, setFilter] = useState<string>('All');
+  const [selectedImage, setSelectedImage] = useState<Hobby | null>(null);
+  const [hobbies, setHobbies] = useState<Hobby[]>([]);
+  const [categories, setCategories] = useState<string[]>(['All']);
+
+  useEffect(() => {
+    fetch(`${API_URL}/hobbies`)
+      .then(res => res.json())
+      .then(data => {
+        setHobbies(data);
+        const cats = ['All', ...new Set(data.map((h: Hobby) => h.category))];
+        setCategories(cats);
+      })
+      .catch(err => console.error('Error fetching hobbies:', err));
+  }, []);
 
   const filteredItems = filter === 'All' 
-    ? HOBBIES 
-    : HOBBIES.filter(item => item.type === filter);
+    ? hobbies 
+    : hobbies.filter(item => item.category === filter);
 
   return (
     <div className="pt-40 pb-24 max-w-7xl mx-auto px-6 md:px-12">
@@ -21,8 +43,8 @@ const Hobbies: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex bg-slate-50 p-2 rounded-2xl">
-          {(['All', 'Graphic Design', 'Photography'] as const).map((cat) => (
+        <div className="flex bg-slate-50 p-2 rounded-2xl flex-wrap">
+          {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setFilter(cat)}
@@ -39,18 +61,18 @@ const Hobbies: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
         {filteredItems.map((item) => (
           <div 
-            key={item.id} 
+            key={item._id} 
             className="group relative aspect-square rounded-[2.5rem] overflow-hidden cursor-pointer shadow-md"
             onClick={() => setSelectedImage(item)}
           >
             <img 
-              src={item.image} 
-              alt={item.title} 
+              src={`http://localhost:5000${item.image}`}
+              alt={item.headline} 
               className="w-full h-full object-cover grayscale transition-all duration-700 group-hover:grayscale-0 group-hover:scale-110"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-10">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/70 mb-2">{item.type}</p>
-              <h3 className="text-2xl text-white serif mb-4">{item.title}</h3>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/70 mb-2">{item.category}</p>
+              <h3 className="text-2xl text-white serif mb-4">{item.headline}</h3>
               <p className="text-white/60 text-sm font-medium flex items-center space-x-2">
                 <Maximize2 size={16} />
                 <span>View Full Size</span>
@@ -73,13 +95,13 @@ const Hobbies: React.FC = () => {
           
           <div className="relative max-w-5xl w-full h-full flex flex-col items-center justify-center" onClick={(e) => e.stopPropagation()}>
             <img 
-              src={selectedImage.image} 
-              alt={selectedImage.title} 
+              src={`http://localhost:5000${selectedImage.image}`}
+              alt={selectedImage.headline} 
               className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
             />
             <div className="text-center mt-8 animate-in slide-in-from-bottom-4 duration-500">
-              <h3 className="text-3xl text-white serif mb-2">{selectedImage.title}</h3>
-              <p className="text-white/50 uppercase tracking-[0.3em] font-bold text-xs">{selectedImage.type}</p>
+              <h3 className="text-3xl text-white serif mb-2">{selectedImage.headline}</h3>
+              <p className="text-white/50 uppercase tracking-[0.3em] font-bold text-xs">{selectedImage.category}</p>
             </div>
           </div>
         </div>

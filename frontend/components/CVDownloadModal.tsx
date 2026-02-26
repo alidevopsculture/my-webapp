@@ -1,11 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Send } from 'lucide-react';
 
 interface CVDownloadModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const CVDownloadModal: React.FC<CVDownloadModalProps> = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
@@ -14,6 +16,16 @@ const CVDownloadModal: React.FC<CVDownloadModalProps> = ({ isOpen, onClose }) =>
     company: '',
   });
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [activeCV, setActiveCV] = useState<any>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetch(`${API_URL}/cv/active`)
+        .then(res => res.json())
+        .then(data => setActiveCV(data))
+        .catch(err => console.error('Error fetching CV:', err));
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -36,11 +48,10 @@ const CVDownloadModal: React.FC<CVDownloadModalProps> = ({ isOpen, onClose }) =>
 
       if (response.ok) {
         setStatus('success');
-        // Download CV
-        const link = document.createElement('a');
-        link.href = '/img/cvs/CV_Ali-Murtaza-2026.pdf';
-        link.download = 'CV_Ali-Murtaza-2026.pdf';
-        link.click();
+        // Open CV in new tab
+        if (activeCV) {
+          window.open(`http://localhost:5000${activeCV.filepath}`, '_blank');
+        }
         
         setTimeout(() => {
           onClose();

@@ -11,6 +11,8 @@ import Profession from './pages/Profession';
 import Hobbies from './pages/Hobbies';
 import Contact from './pages/Contact';
 import CaseStudyDetail from './pages/CaseStudyDetail';
+import Blog from './pages/Blog';
+import BlogDetail from './pages/BlogDetail';
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -36,6 +38,8 @@ const App: React.FC = () => {
             <Route path="/hobbies" element={<Hobbies />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/case-study/:id" element={<CaseStudyDetail />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:id" element={<BlogDetail />} />
           </Routes>
         </main>
 
